@@ -22,7 +22,6 @@ public class MerchantStockController {
     private final ProductService productService;
     private final MerchantService merchantService;
 
-    // 1. Get all merchant stocks
     @GetMapping("/get")
     public ResponseEntity<?> getMerchantStocks() {
 
@@ -37,7 +36,6 @@ public class MerchantStockController {
         return ResponseEntity.status(200).body(merchantStocks);
     }
 
-    // 2. Add a new merchant stock
     @PostMapping("/add")
     public ResponseEntity<?> addMerchantStock(
             @RequestBody @Valid MerchantStock merchantStock,
@@ -54,7 +52,6 @@ public class MerchantStockController {
                 .body(new ApiResponse("Merchant stock added successfully"));
     }
 
-    // 3. Get merchant stock by ID
     @GetMapping("/get/{id}")
     public ResponseEntity<?> getMerchantStockById(@PathVariable String id) {
 
@@ -69,32 +66,27 @@ public class MerchantStockController {
         return ResponseEntity.status(200).body(merchantStock);
     }
 
-    // 4. Add additional stock
     @PutMapping("/add-stock/{productId}/{merchantId}/{additionalStock}")
     public ResponseEntity<?> addAdditionalStock(
             @PathVariable String productId,
             @PathVariable String merchantId,
             @PathVariable int additionalStock) {
 
-        // Check that the product exists
         if (productService.getProductById(productId) == null) {
             return ResponseEntity.status(400)
                     .body("Product not found");
         }
 
-        // Check that the merchant exists
         if (merchantService.getMerchantById(merchantId) == null) {
             return ResponseEntity.status(400)
                     .body("Merchant not found");
         }
 
-        // Check that the additional stock is positive
         if (additionalStock <= 0) {
             return ResponseEntity.status(400)
                     .body("Additional stock must be positive");
         }
 
-        // Check that the merchant has this product
         MerchantStock merchantStock =
                 merchantStockService.getMerchantStockByProductAndMerchant(
                         productId,
@@ -119,9 +111,6 @@ public class MerchantStockController {
                 .body(new ApiResponse("Additional stock added successfully"));
     }
 
-    //================= Extra end points ===================
-
-    // 5. Filter merchant stocks by quantity
     @GetMapping("/filter/{stock}")
     public ResponseEntity<?> getMerchantStocksByStockGreaterThan(
             @PathVariable int stock) {
@@ -142,7 +131,26 @@ public class MerchantStockController {
         return ResponseEntity.status(200).body(filteredMerchantStocks);
     }
 
-    // 6. Update merchant stock
+    @GetMapping("/get-by-product/{productId}")
+    public ResponseEntity<?> getMerchantStocksByProductId(
+            @PathVariable String productId) {
+
+        if (productService.getProductById(productId) == null) {
+            return ResponseEntity.status(400)
+                    .body("Product not found");
+        }
+
+        ArrayList<MerchantStock> merchantStocks =
+                merchantStockService.getMerchantStocksByProductId(productId);
+
+        if (merchantStocks.isEmpty()) {
+            return ResponseEntity.status(400)
+                    .body("No merchant stock found for this product");
+        }
+
+        return ResponseEntity.status(200).body(merchantStocks);
+    }
+
     @PutMapping("/update/{id}")
     public ResponseEntity<?> updateMerchantStock(
             @PathVariable String id,
@@ -179,7 +187,6 @@ public class MerchantStockController {
                 .body(new ApiResponse("Merchant stock updated successfully"));
     }
 
-    // 7. Delete merchant stock
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteMerchantStock(@PathVariable String id) {
 
