@@ -10,76 +10,89 @@ import java.util.ArrayList;
 @Service
 public class UserService {
 
-    private ArrayList<User> users = new ArrayList<>();
+    private final ArrayList<User> users = new ArrayList<>();
 
-    // Add a new user
-    public void addUser(User user) {
-        users.add(user);
-    }
+    private final ArrayList<String> purchaseUsers = new ArrayList<>();
 
-    // Get all users
+    private final ArrayList<String[]> referrals = new ArrayList<>();
+
     public ArrayList<User> getAllUsers() {
         return users;
     }
 
-    // Get user by ID
+    public User addUser(User user) {
+        users.add(user);
+        return user;
+    }
+
     public User getUserById(String id) {
         for (User user : users) {
             if (user.getId().equals(id)) {
                 return user;
             }
         }
+
         return null;
     }
 
-    // Update user
-    public boolean updateUser(String id, User updatedUser) {
+    public User updateUser(String id, User user) {
         for (int i = 0; i < users.size(); i++) {
             if (users.get(i).getId().equals(id)) {
-                users.set(i, updatedUser);
-                return true;
+                users.set(i, user);
+                return user;
             }
         }
-        return false;
+
+        return null;
     }
 
-    // Delete user
     public boolean deleteUser(String id) {
-        for (int i = 0; i < users.size(); i++) {
-            if (users.get(i).getId().equals(id)) {
-                users.remove(i);
+        for (User user : users) {
+            if (user.getId().equals(id)) {
+                users.remove(user);
                 return true;
             }
         }
+
         return false;
     }
 
-    // Buy a normal product
-    public double buyProduct(User user, Product product, MerchantStock merchantStock) {
+    public double buyProduct(
+            User user,
+            Product product,
+            MerchantStock merchantStock) {
 
         double finalPrice = product.getPrice();
 
-        merchantStock.setStock(merchantStock.getStock() - 1);
         user.setBalance(user.getBalance() - finalPrice);
+
+        merchantStock.setStock(merchantStock.getStock() - 1);
+
+        purchaseUsers.add(user.getId());
 
         return finalPrice;
     }
 
-    //================= Extra endpoints ===================
-
-    // Buy a product during Saudi National Day with a 96% discount
-    public double buySaudiNationalDay(User user, Product product, MerchantStock merchantStock) {
+    public double buySaudiNationalDay(
+            User user,
+            Product product,
+            MerchantStock merchantStock) {
 
         double finalPrice = product.getPrice() * 0.04;
 
-        merchantStock.setStock(merchantStock.getStock() - 1);
         user.setBalance(user.getBalance() - finalPrice);
+
+        merchantStock.setStock(merchantStock.getStock() - 1);
+
+        purchaseUsers.add(user.getId());
 
         return finalPrice;
     }
 
-    // Buy multiple products with a quantity-based discount
-    public double buyBulkProducts(User user, Product product, MerchantStock merchantStock,
+    public double buyBulkProducts(
+            User user,
+            Product product,
+            MerchantStock merchantStock,
             int quantity) {
 
         double discountRate = 0;
@@ -93,48 +106,112 @@ public class UserService {
         }
 
         double totalPrice = product.getPrice() * quantity;
+
         double finalPrice = totalPrice * (1 - discountRate);
 
-        merchantStock.setStock(merchantStock.getStock() - quantity);
         user.setBalance(user.getBalance() - finalPrice);
+
+        merchantStock.setStock(merchantStock.getStock() - quantity);
+
+        purchaseUsers.add(user.getId());
 
         return finalPrice;
     }
 
-    // Buy a product with a 10% loyalty discount and free delivery
-    public double buyLoyaltyProduct(User user, Product product, MerchantStock merchantStock) {
+    public boolean isLoyalCustomer(String userId) {
+
+        int purchaseCount = 0;
+
+        for (String id : purchaseUsers) {
+            if (id.equals(userId)) {
+                purchaseCount++;
+            }
+        }
+
+        return purchaseCount > 1;
+    }
+
+    public void addReferral(String userId, String referrerId) {
+
+        referrals.add(new String[]{userId, referrerId});
+    }
+
+    public boolean hasValidReferral(String userId) {
+
+        for (String[] referral : referrals) {
+
+            if (referral[0].equals(userId)) {
+
+                User referrer = getUserById(referral[1]);
+
+                if (referrer != null && !referral[1].equals(userId)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public double buyLoyaltyProduct(
+            User user,
+            Product product,
+            MerchantStock merchantStock) {
 
         double finalPrice = product.getPrice() * 0.90;
 
-        merchantStock.setStock(merchantStock.getStock() - 1);
         user.setBalance(user.getBalance() - finalPrice);
+
+        merchantStock.setStock(merchantStock.getStock() - 1);
+
+        purchaseUsers.add(user.getId());
 
         return finalPrice;
     }
 
-    // Buy a product with a 30% referral discount
-    public double buyReferralProduct(User user, Product product, MerchantStock merchantStock) {
+    public double buyReferralProduct(
+            User user,
+            Product product,
+            MerchantStock merchantStock) {
 
         double finalPrice = product.getPrice() * 0.70;
 
-        merchantStock.setStock(merchantStock.getStock() - 1);
         user.setBalance(user.getBalance() - finalPrice);
+
+        merchantStock.setStock(merchantStock.getStock() - 1);
+
+        purchaseUsers.add(user.getId());
 
         return finalPrice;
     }
 
-    // ============== Extra 1- 3 EndPoints ============
-    // Add balance to a user
     public boolean addBalance(String userId, double amount) {
 
         User user = getUserById(userId);
 
-        if (user == null) {
+        if (user == null || amount <= 0) {
             return false;
         }
 
         user.setBalance(user.getBalance() + amount);
 
         return true;
+    }
+
+    public double calculateBulkPrice(Product product, int quantity) {
+
+        double discountRate = 0;
+
+        if (quantity >= 10) {
+            discountRate = 0.20;
+        } else if (quantity >= 5) {
+            discountRate = 0.10;
+        } else if (quantity >= 3) {
+            discountRate = 0.05;
+        }
+
+        double totalPrice = product.getPrice() * quantity;
+
+        return totalPrice * (1 - discountRate);
     }
 }
