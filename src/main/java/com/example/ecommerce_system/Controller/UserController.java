@@ -1,6 +1,6 @@
 package com.example.ecommerce_system.Controller;
 
-import com.example.ecommerce_system.ApiResponse;
+import com.example.ecommerce_system.Api.ApiResponse;
 import com.example.ecommerce_system.Model.MerchantStock;
 import com.example.ecommerce_system.Model.Product;
 import com.example.ecommerce_system.Model.User;
@@ -45,12 +45,13 @@ public class UserController {
 
         if (errors.hasErrors()) {
             String message = errors.getFieldError().getDefaultMessage();
-
             return ResponseEntity.status(400).body(message);
         }
 
+        userService.addUser(user);
+
         return ResponseEntity.status(200)
-                .body(userService.addUser(user));
+                .body(new ApiResponse("User added successfully"));
     }
 
     @GetMapping("/get/{id}")
@@ -63,6 +64,49 @@ public class UserController {
         }
 
         return ResponseEntity.status(200).body(user);
+    }
+
+    @PutMapping("/update/{id}")
+    public ResponseEntity<?> updateUser(
+            @PathVariable String id,
+            @RequestBody @Valid User user,
+            Errors errors) {
+
+        if (errors.hasErrors()) {
+            String message = errors.getFieldError().getDefaultMessage();
+            return ResponseEntity.status(400).body(message);
+        }
+
+        if (!user.getId().equals(id)) {
+            return ResponseEntity.status(400)
+                    .body("User ID must match the path ID");
+        }
+
+        User existingUser = userService.getUserById(id);
+
+        if (existingUser == null) {
+            return ResponseEntity.status(400).body("User not found");
+        }
+
+        userService.updateUser(id, user);
+
+        return ResponseEntity.status(200)
+                .body(new ApiResponse("User updated successfully"));
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable String id) {
+
+        User user = userService.getUserById(id);
+
+        if (user == null) {
+            return ResponseEntity.status(400).body("User not found");
+        }
+
+        userService.deleteUser(id);
+
+        return ResponseEntity.status(200)
+                .body(new ApiResponse("User deleted successfully"));
     }
 
     @PostMapping("/buy/{userId}/{productId}/{merchantId}")
@@ -99,13 +143,11 @@ public class UserController {
         }
 
         if (merchantStock.getStock() <= 0) {
-            return ResponseEntity.status(400)
-                    .body("Product is out of stock");
+            return ResponseEntity.status(400).body("Product is out of stock");
         }
 
         if (user.getBalance() < product.getPrice()) {
-            return ResponseEntity.status(400)
-                    .body("Insufficient balance");
+            return ResponseEntity.status(400).body("Insufficient balance");
         }
 
         double finalPrice =
@@ -116,8 +158,7 @@ public class UserController {
         return ResponseEntity.status(200)
                 .body(new ApiResponse(
                         "Product purchased successfully. Final price: "
-                                + formattedPrice
-                                + " SAR"
+                                + formattedPrice + " SAR"
                 ));
     }
 
@@ -155,31 +196,27 @@ public class UserController {
         }
 
         if (merchantStock.getStock() <= 0) {
-            return ResponseEntity.status(400)
-                    .body("Product is out of stock");
+            return ResponseEntity.status(400).body("Product is out of stock");
         }
 
         double finalPrice = product.getPrice() * 0.04;
 
         if (user.getBalance() < finalPrice) {
-            return ResponseEntity.status(400)
-                    .body("Insufficient balance");
+            return ResponseEntity.status(400).body("Insufficient balance");
         }
 
-        finalPrice =
-                userService.buySaudiNationalDay(
-                        user,
-                        product,
-                        merchantStock
-                );
+        finalPrice = userService.buySaudiNationalDay(
+                user,
+                product,
+                merchantStock
+        );
 
         String formattedPrice = String.format("%.2f", finalPrice);
 
         return ResponseEntity.status(200)
                 .body(new ApiResponse(
                         "Saudi National Day purchase completed with a 96% discount. Final price: "
-                                + formattedPrice
-                                + " SAR"
+                                + formattedPrice + " SAR"
                 ));
     }
 
@@ -207,7 +244,8 @@ public class UserController {
         }
 
         if (quantity <= 0) {
-            return ResponseEntity.status(400).body("Quantity must be positive");
+            return ResponseEntity.status(400)
+                    .body("Quantity must be greater than 0");
         }
 
         MerchantStock merchantStock =
@@ -223,7 +261,7 @@ public class UserController {
 
         if (merchantStock.getStock() < quantity) {
             return ResponseEntity.status(400)
-                    .body("Not enough stock available");
+                    .body("Not enough stock");
         }
 
         double finalPrice =
@@ -234,21 +272,19 @@ public class UserController {
                     .body("Insufficient balance");
         }
 
-        finalPrice =
-                userService.buyBulkProducts(
-                        user,
-                        product,
-                        merchantStock,
-                        quantity
-                );
+        finalPrice = userService.buyBulkProducts(
+                user,
+                product,
+                merchantStock,
+                quantity
+        );
 
         String formattedPrice = String.format("%.2f", finalPrice);
 
         return ResponseEntity.status(200)
                 .body(new ApiResponse(
-                        "Bulk purchase completed successfully. Final price: "
-                                + formattedPrice
-                                + " SAR"
+                        "Bulk purchase successful. Final price: "
+                                + formattedPrice + " SAR"
                 ));
     }
 
@@ -264,7 +300,7 @@ public class UserController {
             return ResponseEntity.status(400).body("User not found");
         }
 
-        if (!userService.isLoyalCustomer(userId)) {
+        if (!userService.isLoyalCustomer(user)) {
             return ResponseEntity.status(400)
                     .body("User is not eligible for loyalty discount");
         }
@@ -302,20 +338,18 @@ public class UserController {
                     .body("Insufficient balance");
         }
 
-        finalPrice =
-                userService.buyLoyaltyProduct(
-                        user,
-                        product,
-                        merchantStock
-                );
+        finalPrice = userService.buyLoyaltyProduct(
+                user,
+                product,
+                merchantStock
+        );
 
         String formattedPrice = String.format("%.2f", finalPrice);
 
         return ResponseEntity.status(200)
                 .body(new ApiResponse(
                         "Loyalty purchase completed with a 10% discount and free delivery. Final price: "
-                                + formattedPrice
-                                + " SAR"
+                                + formattedPrice + " SAR"
                 ));
     }
 
@@ -331,7 +365,7 @@ public class UserController {
             return ResponseEntity.status(400).body("User not found");
         }
 
-        if (!userService.hasValidReferral(userId)) {
+        if (!userService.hasValidReferral(user)) {
             return ResponseEntity.status(400)
                     .body("User does not have a valid referral");
         }
@@ -369,67 +403,19 @@ public class UserController {
                     .body("Insufficient balance");
         }
 
-        finalPrice =
-                userService.buyReferralProduct(
-                        user,
-                        product,
-                        merchantStock
-                );
+        finalPrice = userService.buyReferralProduct(
+                user,
+                product,
+                merchantStock
+        );
 
         String formattedPrice = String.format("%.2f", finalPrice);
 
         return ResponseEntity.status(200)
                 .body(new ApiResponse(
                         "Referral purchase completed with a 30% discount. Final price: "
-                                + formattedPrice
-                                + " SAR"
+                                + formattedPrice + " SAR"
                 ));
-    }
-
-    @PutMapping("/update/{id}")
-    public ResponseEntity<?> updateUser(
-            @PathVariable String id,
-            @RequestBody @Valid User user,
-            Errors errors) {
-
-        if (errors.hasErrors()) {
-            String message = errors.getFieldError().getDefaultMessage();
-
-            return ResponseEntity.status(400).body(message);
-        }
-
-        if (!user.getId().equals(id)) {
-            return ResponseEntity.status(400)
-                    .body("User ID must match the path ID");
-        }
-
-        User existingUser = userService.getUserById(id);
-
-        if (existingUser == null) {
-            return ResponseEntity.status(400)
-                    .body("User not found");
-        }
-
-        userService.updateUser(id, user);
-
-        return ResponseEntity.status(200)
-                .body(new ApiResponse("User updated successfully"));
-    }
-
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable String id) {
-
-        User user = userService.getUserById(id);
-
-        if (user == null) {
-            return ResponseEntity.status(400)
-                    .body("User not found");
-        }
-
-        userService.deleteUser(id);
-
-        return ResponseEntity.status(200)
-                .body(new ApiResponse("User deleted successfully"));
     }
 
     @PutMapping("/add-balance/{userId}/{amount}")
@@ -440,18 +426,15 @@ public class UserController {
         User user = userService.getUserById(userId);
 
         if (user == null) {
-            return ResponseEntity.status(400)
-                    .body("User not found");
+            return ResponseEntity.status(400).body("User not found");
         }
 
         if (amount <= 0) {
             return ResponseEntity.status(400)
-                    .body("Amount must be positive");
+                    .body("Amount must be greater than 0");
         }
 
-        userService.addBalance(userId, amount);
-
         return ResponseEntity.status(200)
-                .body(new ApiResponse("Balance added successfully"));
+                .body(userService.addBalance(user, amount));
     }
 }
